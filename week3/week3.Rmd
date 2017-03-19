@@ -1,0 +1,282 @@
+---
+title: "week3"
+author: "david"
+date: "March 17, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction to DSM
+
+```{r cars}
+library(raster)
+library(rgdal)
+
+setwd("/home/kushgod/earth-analytics/week3/")
+
+# open raster data
+lidar_dem <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM.tif")
+
+# plot raster data
+plot(lidar_dem,
+     main="Digital Elevation Model - Pre 2013 Flood")
+
+# zoom in to one region of the raster
+plot(lidar_dem,
+  xlim=c(473000, 473030), # define the x limits
+  ylim=c(4434000, 4434030), # define y limits for the plot
+     main="Lidar Raster - Zoomed into to one small region")
+
+#return information
+xres(lidar_dem)
+yres(lidar_dem)
+crs(lidar_dem)
+
+# plot histogram
+hist(lidar_dem,
+     main="Distribution of surface elevation values",
+     xlab="Elevation (meters)", ylab="Frequency",
+     col="springgreen")
+```
+
+## CHM, DSM, DEM
+
+```{r DSM}
+library(raster)
+library(rgdal)
+
+setwd("/home/kushgod/earth-analytics/week3/")
+
+# open raster data
+lidar_dem <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM.tif")
+
+# plot raster data
+plot(lidar_dem,
+     main="Lidar Digital Elevation Model (DEM)")
+
+# open raster data
+lidar_dsm <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DSM.tif")
+
+# plot raster data
+plot(lidar_dsm,
+     main="Lidar Digital Surface Model (DSM)")
+
+# open raster data
+lidar_chm <- lidar_dsm - lidar_dem
+
+# plot raster data
+plot(lidar_chm,
+     main="Lidar Canopy Height Model (CHM)")
+
+# plot raster data
+plot(lidar_chm,
+     breaks = c(0, 2, 10, 20, 30),
+     main="Lidar Canopy Height Model",
+     col=c("white","brown","springgreen","darkgreen"))
+
+# check to see if an output directory exists
+dir.exists("/week3/data/outputs")
+
+## [1] TRUE
+
+# if the output directory doesn't exist, create it
+if (dir.exists("/home/kushgod/earth-analytics/week3/data/outputs")) {
+  print("the directory exists!")
+  } else {
+    # if the directory doesn't exist, create it
+    # recursive tells R to create the entire directory path (data/week3/outputs)
+    dir.create("/home/kushgod/earth-analytics/week3/data/outputs", recursive=TRUE)
+  }
+## [1] "the directory exists!"
+
+# export CHM object to new GeotIFF
+writeRaster(lidar_chm, "/home/kushgod/earth-analytics/week3/data/outputs/lidar_chm.tiff",
+            format="GTiff",  # output format = GeoTIFF
+            overwrite=TRUE) # CAUTION: if this is true, it will overwrite an existing file
+
+#CHALLENGE: subtract pre from post DEM
+#pre
+pre_dsm <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DSM.tif")
+
+#post
+post_dsm <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/post-flood/lidar/post_DSM.tif")
+
+sub <- pre_dsm - post_dsm
+
+plot(sub,
+     main="Cut and Fill Analysis DEM")
+
+writeRaster(sub, "/home/kushgod/earth-analytics/week3/data/outputs/DEM_sub.tiff",
+            format="GTiff",  # output format = GeoTIFF
+            overwrite=TRUE) 
+```
+
+## Classify a Raster
+
+```{r classify a raster}
+library(raster)
+library(rgdal)
+
+# create classification matrix
+reclass_df <- c(0, 10, 1,
+             10, 20, 2,
+             20, 35, 3)
+reclass_df
+## [1]  0 10  1 10 20  2 20 35  3
+
+# reshape the object into a matrix with columns and rows
+reclass_m <- matrix(reclass_df,
+                ncol=3,
+                byrow=TRUE)
+reclass_m
+
+# open canopy height model
+lidar_chm <- raster("/home/kushgod/earth-analytics/week3/data/outputs/lidar_chm.tif")
+
+# reclassify the raster using the reclass object - reclass_m
+chm_classified <- reclassify(lidar_chm,
+                     reclass_m)
+# plot reclassified data
+plot(chm_classified,
+     col=c("red", "blue", "green"))
+
+# plot reclassified data
+plot(chm_classified,
+     legend=F,
+     col=c("red", "blue", "green"), axes=F,
+     main="Canopy Height Model - Classified")
+
+legend("right",
+       legend = c("short trees", "medium trees", "tall trees"),
+       fill = c("red", "blue", "green"),
+       border = F,
+       bty="n") # turn off legend border
+```
+
+## Crop a Raster with a Shapefile
+
+```{r crop a raster with a shapefile}
+library(raster)
+library(rgdal)
+
+lidar_chm <- raster("/home/kushgod/earth-analytics/week3/data/outputs/lidar_chm.tif")
+
+# plot CHM
+plot(lidar_chm,
+     col=rev(terrain.colors(50)))
+
+# import the vector boundary
+crop_extent <- readOGR("/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill",
+                       "clip-extent")
+## OGR data source with driver: ESRI Shapefile 
+## Source: "data/week3/BLDR_LeeHill", layer: "clip-extent"
+## with 1 features
+## It has 1 fields
+## Integer64 fields read as strings:  id
+
+# plot imported shapefile
+# notice that we use add=T to add a layer on top of an existing plot in R.
+plot(crop_extent,
+     main="Shapefile imported into R - crop extent",
+     axes=T,
+     border="blue")
+
+# crop the lidar raster using the vector extent
+lidar_chm_crop <- crop(lidar_chm, crop_extent)
+plot(lidar_chm_crop, main="Cropped lidar chm")
+
+# add shapefile on top of the existing raster
+plot(crop_extent, add=T)
+```
+
+### Create a Basemap
+
+```{r words}
+library(ggmap)
+
+myMap <- get_map(location = "Boulder, Colorado",
+          source="google",
+          maptype="terrain", crop=FALSE,
+          zoom=6)
+## Source : https://maps.googleapis.com/maps/api/staticmap?center=Boulder,+Colorado&zoom=6&size=640x640&scale=2&maptype=terrain&language=en-EN
+## Source : https://maps.googleapis.com/maps/api/geocode/json?address=Boulder%2C%20Colorado
+# plot map
+ggmap(myMap)
+
+# add points to your map
+# creating a sample data.frame with your lat/lon points
+lon <- c(-105.178333)
+lat <- c(40.051667)
+df <- as.data.frame(cbind(lon,lat))
+
+# create a map with a point location for boulder.
+ggmap(myMap) + labs(x = "", y = "") +
+  geom_point(data = df, aes(x = lon, y = lat, fill = "red", alpha = 0.2), size = 5, shape = 19) +
+  guides(fill=FALSE, alpha=FALSE, size=FALSE)
+
+#alt maps
+library(maps)
+
+map('state')
+# add a title to your map
+title('Map of the United States')
+
+map('state', col="darkgray", fill=TRUE, border="white")
+# add a title to your map
+title('Map of the United States')
+
+map('county', regions="Colorado", col="darkgray", fill=TRUE, border="grey80")
+map('state', regions="Colorado", col="black", add=T)
+# add the x, y location of the stream guage using the points 
+# notice i used two colors adn sized to may the symbol look a little brighter
+points(x=-105.178333, y=40.051667, pch=21, col="violetred4", cex=2)
+points(x=-105.178333, y=40.051667, pch=8, col="white", cex=1.3)
+# add a title to your map
+title('County Map of Colorado\nStream gage location')
+
+
+map('state', fill=TRUE, col="darkgray", border="white", lwd=1)
+map(database = "usa", lwd=1, add=T)
+# add the adjacent parts of the US; can't forget my homeland
+map("state","colorado", col="springgreen", 
+    lwd=1, fill=TRUE, add=TRUE)  
+# add gage location
+title("Stream gage location\nBoulder, Colorado")
+# add the x, y location of hte stream guage using the points 
+points(x=-105.178333, y=40.051667, pch=8, col="red", cex=1.3)
+
+```
+
+### Basemaps from ggmap
+
+```{r more words}
+
+library(raster)
+library(rgdal)
+
+# open raster DTM data
+lidar_dem <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM.tif")
+
+# open dem hillshade
+lidar_dem_hill <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM_hill.tif")
+
+# plot raster data
+plot(lidar_dem_hill,
+     main="Lidar Digital Elevation Model (DEM)\n overlayed on top of a hillshade",
+     col=grey(1:100/100),
+     legend=F)
+
+plot(lidar_dem,
+     main="Lidar Digital Elevation Model (DEM)",
+     add=T, alpha=.5)
+
+```
+
+
+![alt text](/home/kushgod/earth-analytics/week3/images/ramen.jpeg)
+
