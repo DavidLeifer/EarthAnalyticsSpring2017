@@ -17,8 +17,23 @@ LiDAR or Light Detection and Ranging- active remote sensing system because the s
 
 The distribution of energy creates a waveform, where the amount of returned energy is known as the intensity.
 
+Common uses for LiDAR include:
+-topographic maps
+-vegetation structure
 
+### Discrete vs. Full Waveform LiDAR
+1.) Discrete Return LiDAR records individual points from the peaks in the waveform curve (usually 1-4).
+2.) Full Waveform LiDAR System records a distribution of returned energy.
 
+LiDAR is usually recorded in .las or .laz files. Metadata tells alot about how and where the data was collected. Classified data will tag the type of object the light reflects off of. Some classified data can be vegetation or ground.
+
+### Raster data types
+
+Although point clouds give alot of information, they are large and sometimes cumbersome to work with. A raster file composed of a regular grid of pixel cells allows the user to navigate the terrain easier. A 1 meter resoultion raster means that each pixel represents a 1m by 1m area on the ground.
+
+Rasters are derived from a number of methods:
+1.) A grid is placed on top of the LiDAR in space and each cell  in the grid gets some points to tell it what it will be classified as.
+2.) Interpolation considers the values of points outside the cell in addition to inside the cell.
 
 ```{r cars}
 library(raster)
@@ -52,6 +67,11 @@ hist(lidar_dem,
 ```
 
 ## CHM, DSM, DEM
+
+3 of the most common derived data products are:
+1.) Digital Terrain Model- ground elevation. These do not include trees and other objects (DEM).
+2.) Digital Surface Model- top of the surface.
+3.) Canopy Height Model- elevation of the Earth's surface. This is the DSM- DEM.
 
 ```{r DSM}
 library(raster)
