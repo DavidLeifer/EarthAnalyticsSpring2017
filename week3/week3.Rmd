@@ -13,14 +13,21 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction to DSM
 
+LiDAR or Light Detection and Ranging- active remote sensing system because the system itself measures the time it takes for emitted light to travel to the ground and back.
+
+The distribution of energy creates a waveform, where the amount of returned energy is known as the intensity.
+
+
+
+
 ```{r cars}
 library(raster)
 library(rgdal)
 
-setwd("/home/kushgod/earth-analytics/week3/")
+setwd("/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/")
 
 # open raster data
-lidar_dem <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM.tif")
+lidar_dem <- raster(x="/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM.tif")
 
 # plot raster data
 plot(lidar_dem,
@@ -50,17 +57,17 @@ hist(lidar_dem,
 library(raster)
 library(rgdal)
 
-setwd("/home/kushgod/earth-analytics/week3/")
+setwd("/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/")
 
 # open raster data
-lidar_dem <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM.tif")
+lidar_dem <- raster(x="/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM.tif")
 
 # plot raster data
 plot(lidar_dem,
      main="Lidar Digital Elevation Model (DEM)")
 
 # open raster data
-lidar_dsm <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DSM.tif")
+lidar_dsm <- raster(x="/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DSM.tif")
 
 # plot raster data
 plot(lidar_dsm,
@@ -85,33 +92,33 @@ dir.exists("/week3/data/outputs")
 ## [1] TRUE
 
 # if the output directory doesn't exist, create it
-if (dir.exists("/home/kushgod/earth-analytics/week3/data/outputs")) {
+if (dir.exists("/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/outputs")) {
   print("the directory exists!")
   } else {
     # if the directory doesn't exist, create it
     # recursive tells R to create the entire directory path (data/week3/outputs)
-    dir.create("/home/kushgod/earth-analytics/week3/data/outputs", recursive=TRUE)
+    dir.create("/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/outputs", recursive=TRUE)
   }
 ## [1] "the directory exists!"
 
 # export CHM object to new GeotIFF
-writeRaster(lidar_chm, "/home/kushgod/earth-analytics/week3/data/outputs/lidar_chm.tiff",
+writeRaster(lidar_chm, "/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/outputs/lidar_chm.tiff",
             format="GTiff",  # output format = GeoTIFF
             overwrite=TRUE) # CAUTION: if this is true, it will overwrite an existing file
 
 #CHALLENGE: subtract pre from post DEM
 #pre
-pre_dsm <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DSM.tif")
+pre_dsm <- raster(x="/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DSM.tif")
 
 #post
-post_dsm <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/post-flood/lidar/post_DSM.tif")
+post_dsm <- raster(x="/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/BLDR_LeeHill/post-flood/lidar/post_DSM.tif")
 
 sub <- pre_dsm - post_dsm
 
 plot(sub,
      main="Cut and Fill Analysis DEM")
 
-writeRaster(sub, "/home/kushgod/earth-analytics/week3/data/outputs/DEM_sub.tiff",
+writeRaster(sub, "/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/outputs/DEM_sub.tiff",
             format="GTiff",  # output format = GeoTIFF
             overwrite=TRUE) 
 ```
@@ -136,7 +143,7 @@ reclass_m <- matrix(reclass_df,
 reclass_m
 
 # open canopy height model
-lidar_chm <- raster("/home/kushgod/earth-analytics/week3/data/outputs/lidar_chm.tif")
+lidar_chm <- raster("/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/outputs/lidar_chm.tif")
 
 # reclassify the raster using the reclass object - reclass_m
 chm_classified <- reclassify(lidar_chm,
@@ -164,14 +171,14 @@ legend("right",
 library(raster)
 library(rgdal)
 
-lidar_chm <- raster("/home/kushgod/earth-analytics/week3/data/outputs/lidar_chm.tif")
+lidar_chm <- raster("/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/outputs/lidar_chm.tif")
 
 # plot CHM
 plot(lidar_chm,
      col=rev(terrain.colors(50)))
 
 # import the vector boundary
-crop_extent <- readOGR("/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill",
+crop_extent <- readOGR("/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/BLDR_LeeHill",
                        "clip-extent")
 ## OGR data source with driver: ESRI Shapefile 
 ## Source: "data/week3/BLDR_LeeHill", layer: "clip-extent"
@@ -260,10 +267,10 @@ library(raster)
 library(rgdal)
 
 # open raster DTM data
-lidar_dem <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM.tif")
+lidar_dem <- raster(x="/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM.tif")
 
 # open dem hillshade
-lidar_dem_hill <- raster(x="/home/kushgod/earth-analytics/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM_hill.tif")
+lidar_dem_hill <- raster(x="/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/data/BLDR_LeeHill/pre-flood/lidar/pre_DTM_hill.tif")
 
 # plot raster data
 plot(lidar_dem_hill,
@@ -278,5 +285,5 @@ plot(lidar_dem,
 ```
 
 
-![alt text](/home/kushgod/earth-analytics/week3/images/ramen.jpeg)
+![alt text](/tmp/guest-hbcurl/EarthAnalyticsSpring2017/week3/images/ramen.jpeg)
 
