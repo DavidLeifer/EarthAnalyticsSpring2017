@@ -1,0 +1,513 @@
+---
+title: "week5"
+author: "david"
+date: "March 25, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+## GIS in R: intro to vectors
+
+```{r spatial data}
+
+library(rgdal)
+library(rgeos)
+# for metadata/attributes- vectors or rasters
+library(raster)
+
+setwd("/home/kushgod/EarthAnalyticsSpring2017/week5/")
+
+
+sjer_plot_locations <- readOGR(dsn="/home/kushgod/EarthAnalyticsSpring2017/week5/data/california/SJER/vector_data",
+                               "SJER_plot_centroids")
+
+plot(sjer_plot_locations, col="blue",
+     pch=8,
+     main="SJER Plot Locations\nMadera County, CA")
+
+sjer_roads <- readOGR(dsn="/home/kushgod/EarthAnalyticsSpring2017/week5/data/california/madera-county-roads",
+                               "tl_2013_06039_roads")
+
+sjer_crop_extent <- readOGR(dsn="/home/kushgod/EarthAnalyticsSpring2017/week5/data/california/SJER/vector_data",
+                               "SJER_crop")
+
+plot(sjer_crop_extent, col = "lightgreen",
+     main="NEON Harvard Forest\nField Site")
+plot(sjer_roads, add = TRUE)
+
+plot(sjer_plot_locations,
+  add  = TRUE,
+  pch = 19,
+  col = "purple")
+```
+
+## Files that make up a shapefile
+
+```{r shapefiles}
+
+library(rgdal)
+library(ggplot2)
+library(rgeos)
+library(raster)
+
+worldBound <- readOGR(dsn="/home/kushgod/EarthAnalyticsSpring2017/week5/data/global/ne_110m_land",
+                      layer="ne_110m_land")
+
+worldBound_df <- fortify(worldBound)
+
+worldMap <- ggplot(worldBound_df, aes(long,lat, group=group)) +
+  geom_polygon() +
+  xlab("Longitude (Degrees)") + ylab("Latitude (Degrees)") +
+  coord_equal() +
+  ggtitle("Global Map - Geographic Coordinate System - WGS84 Datum\n Units: Degrees - Latitude / Longitude")
+
+worldMap
+
+loc.df <- data.frame(lon=c(-105.2519, 10.7500, 2.9833),
+                lat=c(40.0274, 59.9500, 39.6167))
+
+# only needed if the above is a spatial points object
+# loc.df <- fortify(loc)
+
+# add a point to the map
+mapLocations <- worldMap +
+                geom_point(data=loc.df,
+                aes(x=lon, y=lat, group=NULL), colour = "springgreen",
+                      size=5)
+
+mapLocations + theme(legend.position="none")
+
+worldBound_robin <- spTransform(worldBound,
+                                CRS("+proj=robin"))
+
+worldBound_df_robin <- fortify(worldBound_robin)
+## Regions defined for each Polygons
+
+# force R to plot x and y values without rounding digits
+options(scipen=100)
+
+robMap <- ggplot(worldBound_df_robin, aes(long,lat, group=group)) +
+  geom_polygon() +
+  labs(title="World map (robinson)") +
+  xlab("X Coordinates (meters)") + ylab("Y Coordinates (meters)") +
+  coord_equal()
+
+robMap
+
+newMap <- robMap + geom_point(data=loc.df,
+                      aes(x=lon, y=lat, group=NULL),
+                      colour = "springgreen",
+                      size=5)
+
+newMap + theme(legend.position="none")
+
+loc.spdf <- SpatialPointsDataFrame(coords = loc.df, data=loc.df,
+                            proj4string=crs(worldBound))
+
+loc.spdf.rob <- spTransform(loc.spdf, CRSobj = CRS("+proj=robin"))
+
+loc.rob.df <- as.data.frame(cbind(loc.spdf.rob$lon, loc.spdf.rob$lat))
+# rename each column
+names(loc.rob.df ) <- c("X","Y")
+
+# convert spatial object to a data.frame for ggplot
+loc.rob <- fortify(loc.rob.df)
+
+# add a point to the map
+newMap <- robMap + geom_point(data=loc.rob,
+                      aes(x=X, y=Y, group=NULL),
+                      colour = "springgreen",
+                      size=5)
+
+newMap + theme(legend.position="none")
+
+
+```
+
+## Reproject vector data
+
+```{r vectors}
+# load libraries
+library(rgdal)
+library(rgeos)
+library(raster)
+
+options(stringsAsFactors = F)
+
+state_boundary_us <- readOGR("/home/kushgod/EarthAnalyticsSpring2017/week5/data/usa-boundary-layers",
+          "US-State-Boundaries-Census-2014")
+
+class(state_boundary_us)
+
+plot(state_boundary_us,
+     main="Map of Continental US State Boundaries\n US Census Bureau Data")
+
+country_boundary_us <- readOGR("/home/kushgod/EarthAnalyticsSpring2017/week5/data/usa-boundary-layers",
+          "US-Boundary-Dissolved-States")
+
+plot(state_boundary_us,
+     main="Map of Continental US State Boundaries\n US Census Bureau Data",
+     border="gray40")
+
+# view column names
+plot(country_boundary_us,
+     lwd=4,
+     border="gray18",
+     add = TRUE)
+
+sjer_aoi <- readOGR("/home/kushgod/EarthAnalyticsSpring2017/week5/data/california/SJER/vector_data",
+                      "SJER_crop")
+
+plot(sjer_aoi,
+     pch = 19,
+     col = "purple",
+     main="San Joachin Experimental Range AOI")
+
+# plot state boundaries
+plot(state_boundary_us,
+     main="Map of Continental US State Boundaries \n with SJER AOI",
+     border="gray40")
+
+# add US border outline
+plot(country_boundary_us,
+     lwd=4,
+     border="gray18",
+     add = TRUE)
+
+# add AOI boundary
+plot(sjer_aoi,
+     pch = 19,
+     col = "purple",
+     add = TRUE)
+
+sjer_aoi_WGS84 <- spTransform(sjer_aoi,
+                                crs(state_boundary_us))
+
+# plot state boundaries
+plot(state_boundary_us,
+     main="Map of Continental US State Boundaries\n With SJER AOI",
+     border="gray40")
+
+# add US border outline
+plot(country_boundary_us,
+     lwd=4,
+     border="gray18",
+     add = TRUE)
+
+# add AOI
+plot(sjer_aoi_WGS84,
+     pch = 19,
+     col = "purple",
+     add = TRUE)
+
+aoi_centroid <- coordinates(sjer_aoi_WGS84)
+
+# plot state boundaries
+plot(state_boundary_us,
+     main="Map of Continental US State Boundaries\n With SJER AOI",
+     border="gray40")
+
+# add US border outline
+plot(country_boundary_us,
+     lwd=4,
+     border="gray18",
+     add = TRUE)
+
+# add point location of the centroid to the plot
+points(aoi_centroid, pch=8, col="magenta", cex=1.5)
+
+```
+
+## Understand Uncertainty
+
+```{r uncertain}
+
+tree_heights <- data.frame(heights=c(10, 10.1, 9.9, 9.5, 9.7, 9.8,
+                                     9.6, 10.5, 10.7, 10.3, 10.6))
+# what is the average tree height
+mean(tree_heights$heights)
+## [1] 10.06364
+# what is the standard deviation of measurements?
+sd(tree_heights$heights)
+## [1] 0.4129715
+boxplot(tree_heights$heights,
+        main="Distribution of tree height measurements (m)",
+        ylab="Height (m)",
+        col="springgreen")
+
+hist(tree_heights$heights, breaks=c(9,9.6,10.4,11),
+     main="Distribution of measured tree height values",
+     xlab="Height (m)", col="purple")
+```
+
+## Extract raster values using vector boundaries
+
+```{r raster values}
+library(raster)
+library(rgdal)
+library(rgeos)
+library(ggplot2)
+library(dplyr)
+
+options(stringsAsFactors = FALSE)
+
+SJER_chm <- raster("/home/kushgod/EarthAnalyticsSpring2017/week5/data/california/SJER/2013/lidar/SJER_lidarCHM.tif")
+
+hist(SJER_chm,
+     main="Histogram of Canopy Height\n NEON SJER Field Site",
+     col="springgreen",
+     xlab="Height (m)")
+
+# set values of 0 to NA as these are not trees
+SJER_chm[SJER_chm==0] <- NA
+
+# plot the modified data
+hist(SJER_chm,
+     main="Histogram of Canopy Height\n pixels==0 set to NA",
+     col="springgreen",
+     xlab="Height (m)")
+
+# import plot centroids
+SJER_plots <- readOGR("/home/kushgod/EarthAnalyticsSpring2017/week5/data/california/SJER/vector_data",
+                      "SJER_plot_centroids")
+
+# Overlay the centroid points and the stem locations on the CHM plot
+plot(SJER_chm,
+     main="SJER  Plot Locations",
+     col=gray.colors(100, start=.3, end=.9))
+
+# pch 0 = square
+plot(SJER_plots,
+     pch = 16,
+     cex = 2,
+     col = 2,
+     add=TRUE)
+
+SJER_height <- extract(SJER_chm,
+                    SJER_plots,
+                    buffer = 20, # specify a 20 m radius
+                    fun=mean, # extract the MEAN value from each plot
+                    sp=TRUE, # create spatial object
+                    stringsAsFactors=FALSE)
+
+SJER_insitu <- read.csv("/home/kushgod/EarthAnalyticsSpring2017/week5/data/california/SJER/2013/insitu/veg_structure/D17_2013_SJER_vegStr.csv",
+                        stringsAsFactors = FALSE)
+
+# get list of unique plots
+
+insitu_stem_height <- SJER_insitu %>%
+  group_by(plotid) %>%
+  summarise(insitu_max = max(stemheight), insitu_avg = mean(stemheight))
+
+SJER_height <- merge(SJER_height,
+                     insitu_stem_height,
+                   by.x = 'Plot_ID',
+                   by.y = 'plotid')
+
+plot(SJER_chm,
+     main="Vegetation Plots \nSymbol size by Average Tree Height",
+     legend=F)
+
+# add plot location sized by tree height
+plot(SJER_height,
+     pch=19,
+     cex=(SJER_height$SJER_lidarCHM)/10, # size symbols according to tree height attribute normalized by 10
+     add=T)
+
+# place legend outside of the plot
+par(xpd=T)
+legend(SJER_chm@extent@xmax+250,
+       SJER_chm@extent@ymax,
+       legend="plot location \nsized by \ntree height",
+       pch=19,
+       bty='n')
+
+ggplot(SJER_height@data, aes(x=SJER_lidarCHM, y = insitu_avg)) +
+  geom_point() +
+  theme_bw() +
+  ylab("Mean measured height") +
+  xlab("Mean LiDAR pixel") +
+  ggtitle("Lidar Derived Mean Tree Height \nvs. InSitu Measured Mean Tree Height (m)")
+
+ggplot(SJER_height@data, aes(x=SJER_lidarCHM, y = insitu_avg)) +
+  geom_point() +
+  theme_bw() +
+  ylab("Mean measured height") +
+  xlab("Mean LiDAR pixel") +
+  xlim(0,15) + ylim(0,15) + # set x and y limits to 0-20
+  geom_abline(intercept = 0, slope=1) + # add one to one line
+  ggtitle("Lidar Derived Tree Height \nvs. InSitu Measured Tree Height")
+
+p <- ggplot(SJER_height@data, aes(x=SJER_lidarCHM, y = insitu_avg)) +
+  geom_point() +
+  ylab("Maximum Measured Height") +
+  xlab("Maximum LiDAR Height")+
+    xlim(0,15) + ylim(0,15) + # set x and y limits to 0-20
+  geom_abline(intercept = 0, slope=1)+
+  geom_smooth(method=lm)
+
+p + theme(panel.background = element_rect(colour = "grey")) +
+  ggtitle("LiDAR CHM Derived vs Measured Tree Height") +
+  theme(plot.title=element_text(family="sans", face="bold", size=20, vjust=1.9)) +
+  theme(axis.title.y = element_text(family="sans", face="bold", size=14, angle=90, hjust=0.54, vjust=1)) +
+  theme(axis.title.x = element_text(family="sans", face="bold", size=14, angle=00, hjust=0.54, vjust=-.2))
+
+SJER_height@data$ht_diff <-  (SJER_height@data$SJER_lidarCHM - SJER_height@data$insitu_avg)
+
+# create bar plot using ggplot()
+ggplot(data=SJER_height@data,
+       aes(x=Plot_ID, y=ht_diff, fill=Plot_ID)) +
+       geom_bar(stat="identity") +
+       xlab("Plot Name") + ylab("Height difference (m)")
+```
+
+## GIS in R: custom legends
+
+```{r custom legends}
+library(raster)
+library(rgdal)
+options(stringsAsFactors = FALSE)
+
+sjer_roads <- readOGR("/home/kushgod/EarthAnalyticsSpring2017/week5/data/california/madera-county-roads",
+                      "tl_2013_06039_roads")
+
+sjer_roads$RTTYP <- as.factor(sjer_roads$RTTYP)
+
+# create a color palette of 4 colors - one for each factor level
+roadPalette <- c("blue", "green", "grey", "purple")
+roadPalette
+## [1] "blue"   "green"  "grey"   "purple"
+# create a vector of colors - one for each feature in our vector object
+# according to its attribute value
+roadColors <- c("blue", "green", "grey", "purple")[sjer_roads$RTTYP]
+head(roadColors)
+## [1] "green" "green" "green" "green" "green" "green"
+
+# plot the lines data, apply a diff color to each factor level)
+plot(sjer_roads,
+     col=roadColors,
+     lwd=2,
+     main="Madera County Roads")
+
+plot(sjer_roads,
+     col=roadColors,
+     main="Madera County Roads\n All Lines Thickness=6",
+     lwd=6)
+
+lineWidths <- (c(1, 2, 3, 4))[sjer_roads$RTTYP]
+# adjust line width by level
+# in this case, boardwalk (the first level) is the widest.
+plot(sjer_roads,
+     col=roadColors,
+     main="Madera County Roads \n Line width varies by TYPE Attribute Value",
+     lwd=lineWidths)
+
+# add legend to plot
+plot(sjer_roads,
+     col=roadColors,
+     main="Madera County Roads\n Default Legend")
+
+# we can use the color object that we created above to color the legend objects
+roadPalette
+## [1] "blue"   "green"  "grey"   "purple"
+
+# add a legend to our map
+legend("bottomright",   # location of legend
+      legend=levels(sjer_roads$RTTYP), # categories or elements to render in
+			 # the legend
+      fill=roadPalette) # color palette to use to fill objects in legend.
+
+# adjust legend
+plot(sjer_roads,
+     col=roadColors,
+     main="Madera County Roads \n Modified Legend - smaller font and no border")
+# add a legend to our map
+legend("bottomright",
+       legend=levels(sjer_roads$RTTYP),
+       fill=roadPalette,
+       bty="n", # turn off the legend border
+       cex=.8) # decrease the font / legend size
+
+# manually set the colors for the plot!
+newColors <- c("springgreen", "blue", "magenta", "orange")
+newColors
+## [1] "springgreen" "blue"        "magenta"     "orange"
+
+# plot using new colors
+plot(sjer_roads,
+     col=(newColors)[sjer_roads$RTTYP],
+     main="Madera County Roads \n Pretty Colors")
+
+# add a legend to our map
+legend("bottomright",
+       levels(sjer_roads$RTTYP),
+       fill=newColors,
+       bty="n", cex=.8)
+
+# convert to factor if necessary
+sjer_roads$RTTYP <- as.factor(sjer_roads$RTTYP)
+levels(sjer_roads$RTTYP)
+## [1] "C"       "M"       "S"       "Unknown"
+
+# count factor levels
+length(levels(sjer_roads$RTTYP))
+## [1] 4
+# set colors so only the allowed roads are magenta
+# note there are 3 levels so we need 3 colors
+challengeColors <- c("magenta","grey","magenta","grey")
+challengeColors
+## [1] "magenta" "grey"    "magenta" "grey"
+
+# plot using new colors
+plot(sjer_roads,
+     col=(challengeColors)[sjer_roads$RTTYP],
+     lwd=c(4,1,1,1)[sjer_roads$RTTYP],
+     main="SJER Roads")
+
+# add a legend to our map
+legend("bottomright",
+       levels(sjer_roads$RTTYP),
+       fill=challengeColors,
+       bty="n", # turn off border
+       cex=.8) # adjust font size
+
+plot(sjer_roads,
+     col=(challengeColors)[sjer_roads$RTTYP],
+     lwd=c(4,1,2,1)[sjer_roads$RTTYP], # color each line in the map by attribute
+     main="Madera County Roads\n County and State recognized roads")
+
+# add a legend to our map
+legend("bottomright",
+       levels(sjer_roads$RTTYP),
+       lty=c(1,1,1,1), # tell are which objects to be drawn as a line in the legend.
+       lwd=c(4,1,2,1),  # set the WIDTH of each legend line
+       col=challengeColors, # set the color of each legend line
+       bty="n", # turn off border
+       cex=.8) # adjust font size
+
+sjer_plots <- readOGR("/home/kushgod/EarthAnalyticsSpring2017/week5/data/california/SJER/vector_data",
+                      "SJER_plot_centroids")
+
+sjer_plots$plot_type <- as.factor(sjer_plots$plot_type)
+levels(sjer_plots$plot_type)
+## [1] "grass" "soil"  "trees"
+# grass, soil trees
+plot_colors <- c("chartreuse4", "burlywood4", "darkgreen")
+
+# plot using new colors
+plot(sjer_plots,
+     col=(plot_colors)[sjer_plots$plot_type],
+     pch=8,
+     main="Madera County Roads\n County and State recognized roads")
+
+
+# add a legend to our map
+legend("bottomright",
+       legend = levels(sjer_plots$plot_type),
+       pch=c(8,18,8),  # set the WIDTH of each legend line
+       col=plot_colors, # set the color of each legend line
+       bty="n", # turn off border
+       cex=.9) # adjust legend font size
+```
