@@ -1,0 +1,177 @@
+---
+title: "Week 6"
+author: "david"
+date: "April 3, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Intro to spectral remote sensing- Multiband in R
+
+```{r spectral remote sensing}
+
+library(raster)
+library(rgdal)
+library(rgeos)
+
+setwd("/home/kushgod/EarthAnalyticsSpring2017/week6/data/")
+
+naip_csf <- raster("/home/kushgod/EarthAnalyticsSpring2017/week6/data/naip/m_3910505_nw_13_1_20130926/crop/m_3910505_nw_13_1_20130926_crop.tif")
+
+# Plot band 1
+plot(naip_csf,
+     col=gray(0:100 / 100),
+     axes=FALSE,
+     main="NAIP RGB Imagery - Band 1-Red\nCold Springs Fire Scar")
+
+rgb_band2 <- raster("/home/kushgod/EarthAnalyticsSpring2017/week6/data/naip/m_3910505_nw_13_1_20130926/crop/m_3910505_nw_13_1_20130926_crop.tif")
+
+plot(rgb_band2,
+     col=gray(0:100 / 100),
+     axes=FALSE,
+     main="RGB Imagery - Band 2 - Green\nCold Springs Fire Scar")
+
+naip_stack_csf <- stack("/home/kushgod/EarthAnalyticsSpring2017/week6/data/naip/m_3910505_nw_13_1_20130926/crop/m_3910505_nw_13_1_20130926_crop.tif")
+
+hist(naip_stack_csf,
+     maxpixels=ncell(naip_stack_csf),
+     col="purple")
+
+plot(naip_stack_csf,
+     col=gray(0:100 / 100))
+
+#rgb stack
+
+plotRGB(naip_stack_csf,
+        r = 1, g = 2, b = 3,
+        main="RGB image \nColdsprings fire scar")
+
+par(col.axis="white", col.lab="white", tck=0)
+plotRGB(naip_stack_csf,
+        r = 1, g = 2, b = 3,
+        axes=T,
+        main="NAIP RGB image \nColdsprings fire scar")
+box(col="white") # turn all of the lines to white
+
+# what does stretch do?
+plotRGB(naip_stack_csf,
+        r = 1, g = 2, b = 3,
+        axes=T,
+        stretch = "lin",
+        main="NAIP RGB plot with linear stretch\nColdsprings fire scar")
+
+par(col.axis="white", col.lab="white", tck=0)
+plotRGB(naip_stack_csf,
+        r = 1, g = 2, b = 3,
+        axes=T,
+        scale=800,
+        stretch = "hist",
+        main="NAIP RGB plot with hist stretch\nColdsprings fire scar")
+box(col="white") # turn all of the lines to white
+
+naip_brick_csf <- brick(naip_stack_csf)
+
+par(col.axis="white", col.lab="white", tck=0)
+# plot brick
+plotRGB(naip_brick_csf,
+  main="NAIP plot from a rasterbrick",
+  axes=T)
+box(col="white") # turn all of the lines to white
+
+```
+
+## Landsat tif files in R
+
+```{r landsat tif files in R}
+
+library(raster)
+library(rgdal)
+library(rgeos)
+
+options(stringsAsFactors = F)
+
+setwd("/home/kushgod/EarthAnalyticsSpring2017/week6/data/")
+
+list.files("/home/kushgod/EarthAnalyticsSpring2017/week6/data/landsat/LC80340322016205-SC20170127160728/crop")
+
+all_landsat_bands <- list.files("/home/kushgod/EarthAnalyticsSpring2017/week6/data/landsat/LC80340322016205-SC20170127160728/crop",
+           pattern=glob2rx("*band*.tif$"),
+           full.names = T) # use the dollar sign at the end to get all files that END WITH
+all_landsat_bands
+
+all_landsat_bands[2]
+## [1] "data/week6/Landsat/LC80340322016205-SC20170127160728/crop/LC80340322016205LGN00_sr_band2_crop.tif"
+landsat_band2 <- raster(all_landsat_bands[2])
+plot(landsat_band2,
+     main="Landsat cropped band 2\nColdsprings fire scar",
+     col=gray(0:100 / 100))
+
+landsat_stack_csf <- stack(all_landsat_bands)
+# view stack attributes
+plot(landsat_stack_csf,
+     col=gray(20:100 / 100))
+
+names(landsat_stack_csf)
+
+names(landsat_stack_csf) <- gsub(pattern = "LC80340322016205LGN00_sr_", replacement = "", names(landsat_stack_csf))
+plot(landsat_stack_csf,
+     col=gray(20:100 / 100))
+
+par(col.axis="white", col.lab="white", tck=0)
+plotRGB(landsat_stack_csf,
+     r=4, g=3, b=2,
+     stretch="lin",
+     axes=T,
+     main="RGB composite image\n Landsat Bands 4, 3, 2")
+box(col="white")
+
+par(col.axis="white", col.lab="white", tck=0)
+plotRGB(landsat_stack_csf,
+     r=5, g=4, b=3,
+     stretch="lin",
+     axes=T,
+     main="Color infrared composite image\n Landsat Bands 5, 4, 3")
+box(col="white")
+```
+
+## Vegetation indices in R
+
+```{r vegetation indices in R}
+
+library(raster)
+library(rgdal)
+library(rgeos)
+library(RColorBrewer)
+options(stringsAsFactors = F)
+
+setwd("/home/kushgod/EarthAnalyticsSpring2017/week6/data/")
+
+all_landsat_bands <- list.files("/home/kushgod/EarthAnalyticsSpring2017/week6/data/landsat/LC80340322016205-SC20170127160728/crop",
+           pattern=glob2rx("*band*.tif$"),
+           full.names = T) # use the dollar sign at the end to get all files that END WITH
+
+all_landsat_bands
+
+landsat_stack_csf <- stack(all_landsat_bands)
+
+landsat_ndvi <- (landsat_stack_csf[[5]] - landsat_stack_csf[[4]]) / (landsat_stack_csf[[5]] + landsat_stack_csf[[4]])
+
+
+plot(landsat_ndvi,
+     main="Landsat derived NDVI\n 23 July 2016")
+
+hist(landsat_ndvi,
+  main="NDVI: Distribution of pixels\n Landsat 2016 Cold Springs fire site",
+  col="springgreen")
+
+writeRaster(x = landsat_ndvi,
+              filename="/home/kushgod/EarthAnalyticsSpring2017/week6/data/outputs/landsat_ndvi.tif",
+              format = "GTiff", # save as a tif
+              datatype='INT2S', # save as a INTEGER rather than a float
+              overwrite = T)  # OPTIONAL - be careful. this will OVERWRITE previous files.
+```
